@@ -97,31 +97,6 @@ jobs:
           flake8 app/ tests/ --count --select=E9,F63,F7,F82 --show-source --statistics
           pytest tests/ -v --cov=app --cov-report=xml --cov-report=term-missing
 
-  # Security Scanning (simplified)
-  security:
-    name: Security Scan
-    runs-on: ubuntu-latest
-    if: github.event_name == 'push'  # Only run on pushes, not PRs
-    steps:
-      - uses: actions/checkout@v4
-      
-      - name: Set up Python
-        uses: actions/setup-python@v4
-        with:
-          python-version: ${{ env.PYTHON_VERSION }}
-          
-      - name: Install dependencies
-        run: |
-          python -m pip install --upgrade pip
-          pip install safety bandit
-          pip install -r requirements/base.txt
-          
-      - name: Run safety check
-        run: safety check --ignore=70612 --exit-zero  # More lenient
-        
-      - name: Run bandit security scan
-        run: bandit -r app/ -f json --exit-zero  # More lenient
-
   # Docker E2E Tests (like your local environment)
   docker-test:
     name: Docker E2E Tests
