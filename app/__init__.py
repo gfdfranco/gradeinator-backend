@@ -32,8 +32,8 @@ def create_app(config_name=None):
     )
 
     # Register namespaces
-    from app.routes.general import api as general_ns
     from app.routes.auth import api as auth_ns
+    from app.routes.general import api as general_ns
 
     # Add general endpoints at root level (no path prefix)
     api.add_namespace(general_ns, path="")

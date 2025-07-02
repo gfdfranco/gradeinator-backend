@@ -1,7 +1,8 @@
-from flask_restx import Namespace, Resource, fields
-from flask import current_app
-import psutil
 from datetime import datetime
+
+import psutil
+from flask import current_app
+from flask_restx import Namespace, Resource, fields
 from sqlalchemy import text
 
 # Create namespace for general endpoints

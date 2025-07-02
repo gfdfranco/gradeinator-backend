@@ -1,10 +1,11 @@
 """
-Integration tests for core application endpoints.
+Integration tests for main application endpoints.
 
 Tests the main application endpoints (/, /health) with full Flask app context.
 """
-import pytest
 import json
+
+import pytest
 
 
 class TestRootEndpoint:

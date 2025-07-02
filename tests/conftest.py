@@ -1,11 +1,13 @@
 """
-Global test configuration and fixtures.
+Test configuration and fixtures.
 
 This file contains pytest fixtures that are available to all tests.
 """
-import pytest
-import tempfile
 import os
+import tempfile
+
+import pytest
+
 from app import create_app, db
 
 
