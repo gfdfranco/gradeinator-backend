@@ -1,0 +1,5 @@
+# requirements/prod.txt
+# Production-specific dependencies
+
+-r base.txt # Include base dependencies
+gunicorn==21.2.0 # Production WSGI server

@@ -1,0 +1,10 @@
+# requirements/dev.txt
+# Development-specific dependencies
+
+-r base.txt # Include base dependencies
+pytest==7.4.4 # For testing
+pytest-cov==4.1.0 # For test coverage reporting
+Flask-DebugToolbar==0.13.1 # For Flask debugging
+ipython==8.18.1 # Interactive shell
+flake8==6.1.0 # Linter for code quality
+black==23.12.1 # Code formatter
