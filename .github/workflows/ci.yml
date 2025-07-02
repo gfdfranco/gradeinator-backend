@@ -113,8 +113,8 @@ jobs:
           
       - name: Build and test with Docker Compose
         run: |
-          docker-compose -f docker-compose.dev.yml build
-          docker-compose -f docker-compose.dev.yml up -d
+          docker compose -f docker-compose.dev.yml build
+          docker compose -f docker-compose.dev.yml up -d
           
       - name: Wait for services to be ready
         run: |
@@ -123,7 +123,7 @@ jobs:
       - name: Run Docker tests (like your command)
         run: |
           # Test the same command you use locally
-          docker-compose -f docker-compose.dev.yml run --rm app sh -c "flake8 app/ tests/ && pytest tests/ -v"
+          docker compose -f docker-compose.dev.yml run --rm app sh -c "flake8 app/ tests/ && pytest tests/ -v"
           
       - name: Test API endpoints
         run: |
@@ -134,4 +134,8 @@ jobs:
       - name: Cleanup
         if: always()
         run: |
-          docker-compose -f docker-compose.dev.yml down -v 
+          docker compose -f docker-compose.dev.yml down -v
+      - name: Install docker-compose (legacy)
+        run: |
+          sudo curl -L "https://github.com/docker/compose/releases/download/1.29.2/docker-compose-$(uname -s)-$(uname -m)" -o /usr/local/bin/docker-compose
+          sudo chmod +x /usr/local/bin/docker-compose 
