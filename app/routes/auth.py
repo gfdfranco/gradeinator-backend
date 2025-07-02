@@ -1,5 +1,6 @@
 from flask import current_app, request
 from flask_restx import Namespace, Resource, fields
+
 from app import db
 from app.models.user import User
 
