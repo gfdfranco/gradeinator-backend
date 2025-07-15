@@ -12,8 +12,9 @@ class Login(Resource):
         # Get the oauth object attached to the app in create_app
         oauth = current_app.oauth.cognito
 
-        # Redirect directly to Cognito (like AWS docs)
-        return oauth.authorize_redirect('http://localhost:5001/auth/callback')
+        # Use url_for to generate the correct callback URL with API prefix
+        callback_url = url_for('auth_callback', _external=True)
+        return oauth.authorize_redirect(callback_url)
 
 
 @api.route('/callback')

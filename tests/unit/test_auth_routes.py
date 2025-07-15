@@ -1,6 +1,6 @@
 import pytest
 from unittest.mock import patch, MagicMock
-from flask import session
+from flask import session, url_for
 from app import create_app
 
 
@@ -28,9 +28,12 @@ class TestAuthRoutes:
             response = client.get('/api/auth/login')
 
             assert response.status_code == 302
-            mock_oauth.authorize_redirect.assert_called_once_with(
-                'http://localhost:5001/auth/callback'
-            )
+            # Use url_for to generate the expected URL dynamically
+            with client.application.app_context():
+                expected_callback_url = url_for('auth_callback', _external=True)
+                mock_oauth.authorize_redirect.assert_called_once_with(
+                    expected_callback_url
+                )
 
     @patch('app.routes.auth.current_app.oauth.cognito')
     def test_callback_success(self, mock_oauth, client):
