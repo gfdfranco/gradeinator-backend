@@ -1,79 +1,83 @@
-from flask import current_app, request
-from flask_restx import Namespace, Resource, fields
-
-from app import db
-from app.models.user import User
-
-# Create namespace
+from flask import redirect, url_for, session, current_app, request
+from flask_restx import Namespace, Resource
+# Create the namespace for authentication
 api = Namespace('auth', description='Authentication related operations')
 
-# Define models for documentation
-user_model = api.model('User', {
-    'id': fields.Integer(required=True, description='User ID'),
-    'username': fields.String(required=True, description='Username'),
-    'email': fields.String(required=True, description='Email address'),
-    'created_at': fields.DateTime(description='Creation timestamp')
-})
 
-user_input_model = api.model('UserInput', {
-    'username': fields.String(required=True, description='Username'),
-    'email': fields.String(required=True, description='Email address')
-})
-
-test_response_model = api.model('TestResponse', {
-    'message': fields.String(description='Response message'),
-    'cognito_region': fields.String(description='AWS Cognito region'),
-    'environment': fields.String(description='Current environment')
-})
-
-users_response_model = api.model('UsersResponse', {
-    'users': fields.List(fields.Nested(user_model)),
-    'count': fields.Integer(description='Number of users')
-})
-
-
-@api.route('/test')
-class AuthTest(Resource):
-    @api.doc('test_auth')
-    @api.marshal_with(test_response_model)
+@api.route('/login')
+class Login(Resource):
+    @api.doc(description="Redirects user to Cognito Hosted UI for login.")
     def get(self):
-        """Test route to verify auth is working"""
-        return {
-            "message": "Auth blueprint is working!",
-            "cognito_region": current_app.config.get('AWS_COGNITO_REGION'),
-            "environment": current_app.config.get('FLASK_ENV')
-        }
+        """Initiate the OIDC login flow."""
+        # Get the oauth object attached to the app in create_app
+        oauth = current_app.oauth.cognito
+
+        # Use url_for to generate the correct callback URL with API prefix
+        callback_url = url_for('auth_callback', _external=True)
+        return oauth.authorize_redirect(callback_url)
 
 
-@api.route('/users')
-class UserList(Resource):
-    @api.doc('list_users')
-    @api.marshal_with(users_response_model)
+@api.route('/callback')
+class Callback(Resource):
+    @api.doc(description="Handles the callback from Cognito after a successful login.")
     def get(self):
-        """Get all users"""
+        """Process the OIDC callback and create a session."""
         try:
-            users = User.query.all()
+            oauth = current_app.oauth.cognito
+            token = oauth.authorize_access_token()
+
+            # Store user info in the session
+            session['user'] = token.get('userinfo', {})
+
+            # Return a success response with the redirect URL
             return {
-                "users": [user.to_dict() for user in users],
-                "count": len(users)
-            }
+                'message': 'Login successful',
+                'user': token.get('userinfo', {}),
+                'redirect_url': url_for('auth_profile', _external=True)
+            }, 200
         except Exception as e:
-            api.abort(500, f"Database error: {str(e)}")
+            # Handle OAuth errors
+            return {
+                'error': 'Authentication failed',
+                'message': str(e)
+            }, 400
 
-    @api.doc('create_user')
-    @api.expect(user_input_model)
-    @api.marshal_with(user_model, code=201)
-    def post(self):
-        """Create a new user"""
-        try:
-            data = api.payload
-            user = User(
-                username=data['username'],
-                email=data['email']
-            )
-            db.session.add(user)
-            db.session.commit()
-            return user.to_dict(), 201
-        except Exception as e:
-            db.session.rollback()
-            api.abort(500, f"Database error: {str(e)}")
+
+@api.route('/logout')
+class Logout(Resource):
+    @api.doc(description="Logs the user out from the application and Cognito.")
+    def get(self):
+        """Initiate the OIDC logout flow."""
+        # Clear the local user session
+        session.pop('user', None)
+        session.pop('oauth_state', None)
+
+        # Get config values
+        cognito_domain = current_app.config['AWS_COGNITO_DOMAIN']
+        client_id = current_app.config['AWS_COGNITO_APP_CLIENT_ID']
+
+        # Use the profile endpoint as the logout redirect destination
+        logout_uri = url_for('auth_profile', _external=True)
+
+        # Clean the domain to remove any existing protocol
+        cleaned_domain = cognito_domain.replace('https://', '').replace('http://', '')
+
+        # Construct the final logout URL
+        logout_url = (f"https://{cleaned_domain}/logout?"
+                      f"client_id={client_id}&"
+                      f"logout_uri={logout_uri}")
+
+        # Redirect the user's browser to the Cognito logout page
+        return redirect(logout_url)
+
+
+@api.route('/profile')
+class Profile(Resource):
+    @api.doc(description="Get the current logged-in user's profile information.")
+    def get(self):
+        """Returns user data if a session exists."""
+        user = session.get('user')
+        if user:
+            return user, 200
+
+        api.abort(401, "User is not authenticated.")
