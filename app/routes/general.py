@@ -1,9 +1,9 @@
-from datetime import datetime
+from datetime import datetime, timezone
 
 import psutil
 from flask import current_app
 from flask_restx import Namespace, Resource, fields
-from sqlalchemy import text
+from app import db
 
 # Create namespace for general endpoints
 api = Namespace('general', description='General API operations')
@@ -20,9 +20,9 @@ health_response_model = api.model('HealthResponse', {
     'timestamp': fields.DateTime(description='Check timestamp'),
     'version': fields.String(description='API version'),
     'environment': fields.String(description='Current environment'),
-    'database': fields.String(description='Database connection status'),
     'uptime': fields.String(description='Application uptime'),
-    'memory_usage': fields.Raw(description='Memory usage statistics')
+    'memory_usage': fields.Raw(description='Memory usage statistics'),
+    'database': fields.Raw(description='Database connection status')
 })
 
 
@@ -45,14 +45,16 @@ class HealthCheck(Resource):
     @api.marshal_with(health_response_model)
     def get(self):
         """Health check endpoint - API status and diagnostics"""
-        from app import db
 
         # Check database connection
         try:
-            db.session.execute(text('SELECT 1'))
-            db_status = 'healthy'
+            db.session.execute(db.text('SELECT 1'))
+            db_status = {'status': 'connected', 'message': 'Database is accessible'}
         except Exception as e:
-            db_status = f'unhealthy: {str(e)}'
+            db_status = {
+                'status': 'error',
+                'message': f'Database connection failed: {str(e)}'
+            }
 
         # Get memory usage
         try:
@@ -74,11 +76,11 @@ class HealthCheck(Resource):
             uptime = "unknown"
 
         return {
-            'status': 'healthy' if db_status == 'healthy' else 'degraded',
-            'timestamp': datetime.utcnow(),
+            'status': 'healthy',
+            'timestamp': datetime.now(timezone.utc),
             'version': '1.0',
             'environment': current_app.config.get('FLASK_ENV', 'unknown'),
-            'database': db_status,
             'uptime': uptime,
-            'memory_usage': memory_usage
+            'memory_usage': memory_usage,
+            'database': db_status
         }

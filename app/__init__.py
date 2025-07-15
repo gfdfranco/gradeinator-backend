@@ -1,62 +1,83 @@
-from flask import Flask
+import os
+from flask import Flask, redirect, url_for, jsonify
 from flask_restx import Api
+from flask_cors import CORS
 from flask_sqlalchemy import SQLAlchemy
-
 from app.config import config
+from app.utils.oauth import init_oauth
 
-# Initialize extensions
+# Initialize database
 db = SQLAlchemy()
 
 
-def create_app(config_name=None):
-    """Application factory pattern"""
+def create_app(config_name=os.getenv('FLASK_ENV', 'default')):
+    """
+    Application factory function.
+    Configures and returns the Flask application.
+    """
     app = Flask(__name__)
-
-    # Determine configuration
-    if config_name is None:
-        import os
-        config_name = os.environ.get('FLASK_ENV', 'development')
-
-    # Load configuration
     app.config.from_object(config[config_name])
 
-    # Initialize extensions with app
+    # Initialize database
     db.init_app(app)
 
-    # Initialize Flask-RESTX
-    api = Api(
+    # --- Environment-Specific Configurations ---
+    is_production = app.config['FLASK_ENV'] == 'production'
+
+    # 1. Configure CORS based on the environment
+    if is_production:
+        # In production, only allow your specific frontend domain.
+        # Replace this with your actual frontend URL.
+        origins = ['https://www.your-production-frontend.com']
+    else:
+        # In development, allow more flexible origins for local testing.
+        # This typically includes your local frontend development server.
+        origins = ['http://localhost:3000', 'http://127.0.0.1:3000']
+
+    CORS(
         app,
-        title="Gradeinator API",
-        version="1.0",
-        description="A comprehensive API for grade management",
-        doc="/docs/"
+        origins=origins,
+        supports_credentials=True,
+        # Expose the 'Location' header to allow frontend to see redirect URLs
+        expose_headers=['Location'],
     )
 
-    # Register namespaces
-    from app.routes.auth import api as auth_ns
-    from app.routes.general import api as general_ns
+    # 2. Configure Session Cookies for Security
+    # In production, cookies must be secure.
+    app.config.update(
+        SESSION_COOKIE_SECURE=is_production,
+        SESSION_COOKIE_HTTPONLY=True,
+        # Use 'Lax' for a good balance of security and usability with OIDC redirects.
+        # 'None' requires Secure=True, which is handled by is_production.
+        SESSION_COOKIE_SAMESITE='Lax'
+    )
 
-    # Add general endpoints at root level (no path prefix)
-    api.add_namespace(general_ns, path="")
+    # 3. Initialize OAuth Client
+    # Attach the configured oauth object to the app context
+    oauth = init_oauth(app)
+    app.oauth = oauth
 
-    # Add auth endpoints under /auth
-    api.add_namespace(auth_ns, path="/auth")
-
-    # Create database tables
-    with app.app_context():
-        db.create_all()
-
-    # Basic route for testing
+    # Add a simple root route BEFORE Flask-RESTX
     @app.route('/')
-    def hello():
-        return {
-            "message": "Gradeinator API is running!",
-            "environment": app.config['FLASK_ENV'],
-            "debug": app.config['DEBUG']
-        }
+    def index():
+        # This is useful for the logout redirect and for simple health checks.
+        return jsonify({"message": "API is running"})
 
-    @app.route('/health')
-    def health_check():
-        return {"status": "healthy", "environment": app.config['FLASK_ENV']}
+    # 4. Initialize Flask-RESTX API (after root route)
+    api = Api(
+        app,
+        version='1.0',
+        title='Gradeinator API',
+        description='API for the Gradeinator application, including authentication.',
+        doc='/docs/',
+        prefix='/api'  # Add prefix to avoid root route conflict
+    )
+
+    # 5. Register API Namespaces
+    from app.routes.general import api as general_ns
+    from app.routes.auth import api as auth_ns
+
+    api.add_namespace(general_ns, path='/general')
+    api.add_namespace(auth_ns, path='/auth')
 
     return app
