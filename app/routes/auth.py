@@ -1,7 +1,5 @@
 from flask import redirect, url_for, session, current_app, request
 from flask_restx import Namespace, Resource
-import secrets
-
 # Create the namespace for authentication
 api = Namespace('auth', description='Authentication related operations')
 
