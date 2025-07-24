@@ -11,7 +11,7 @@ def sample_course_data():
     return {
         'name': 'Introduction to Python',
         'course_code': 'PYTH101',
-        'course_uuid': str(uuid.uuid4()),  # Dynamically generated UUID
+        'course_uuid': '123e4567-e89b-12d3-a456-426614174000',  # Hardcoded UUID
         'user_id': 'test-user-123',
         'start_date': date(2024, 1, 15),
         'end_date': date(2024, 5, 15),
