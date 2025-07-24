@@ -68,9 +68,12 @@ class TestHealthEndpoint:
         assert data['status'] == 'healthy'
 
     def test_health_endpoint_environment_testing(self, client):
-        """Test that environment is 'testing' in test mode."""
+        """Test that health endpoint returns testing environment in tests."""
         response = client.get('/api/general/health')
-        data = json.loads(response.data)
+        assert response.status_code == 200
+
+        data = response.get_json()
+        # In test environment, should be 'testing'
         assert data['environment'] == 'testing'
 
 
