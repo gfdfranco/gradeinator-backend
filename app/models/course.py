@@ -16,7 +16,12 @@ class Course(db.Model):
     # Course identification
     name = Column(String(255), nullable=False)
     # Use String for UUID to be compatible with SQLite and PostgreSQL
-    _course_uuid = Column('course_uuid', String(36), unique=True, nullable=False)
+    _course_uuid = Column(
+        'course_uuid',
+        UUID(as_uuid=True) if db.engine.name == 'postgresql' else String(36),
+        unique=True,
+        nullable=False
+    )
     course_code = Column(String(20), nullable=False)
 
     # Status
