@@ -3,29 +3,17 @@ Test configuration and fixtures.
 
 This file contains pytest fixtures that are available to all tests.
 """
-import os
-import tempfile
-
 import pytest
-
+import os
 from app import create_app, db
 
 
-@pytest.fixture
+@pytest.fixture(scope='session')
 def app():
-    """Create application for testing."""
+    """Create application for the tests."""
+    # Force testing environment
+    os.environ['FLASK_ENV'] = 'testing'
     app = create_app('testing')
-
-    # Ensure testing config is properly applied
-    app.config.update({
-        'TESTING': True,
-        'SECRET_KEY': 'test-secret-key',
-        'FLASK_ENV': 'testing',
-        'SERVER_NAME': 'localhost:5000',
-        'AWS_COGNITO_DOMAIN': 'test.auth.us-east-1.amazoncognito.com',
-        'AWS_COGNITO_APP_CLIENT_ID': 'test-client-id',
-        'AWS_COGNITO_APP_CLIENT_SECRET': 'test-secret'
-    })
 
     with app.app_context():
         db.create_all()
@@ -35,8 +23,34 @@ def app():
 
 @pytest.fixture
 def client(app):
-    """Create test client."""
+    """Create a test client for the app."""
     return app.test_client()
+
+
+@pytest.fixture
+def app_context(app):
+    """Create an application context."""
+    with app.app_context():
+        yield app
+
+
+@pytest.fixture(autouse=True)
+def db_session(app):
+    """Create a database session for testing with automatic cleanup."""
+    with app.app_context():
+        # Start a transaction
+        connection = db.engine.connect()
+        transaction = connection.begin()
+
+        # Configure session to use the transaction
+        db.session.configure(bind=connection)
+
+        yield db.session
+
+        # Rollback the transaction and close connection
+        transaction.rollback()
+        connection.close()
+        db.session.remove()
 
 
 @pytest.fixture

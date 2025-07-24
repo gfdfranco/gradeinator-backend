@@ -1,5 +1,9 @@
 #!/bin/bash
+
 set -e
+
+# Run migrations using bash directly
+bash scripts/run_migrations.sh
 
 # Function to install requirements based on environment
 install_requirements() {
