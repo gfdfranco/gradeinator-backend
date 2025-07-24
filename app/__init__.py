@@ -3,11 +3,13 @@ from flask import Flask, redirect, url_for, jsonify
 from flask_restx import Api
 from flask_cors import CORS
 from flask_sqlalchemy import SQLAlchemy
+from flask_migrate import Migrate
 from app.config import config
 from app.utils.oauth import init_oauth
 
-# Initialize database
+# Initialize database and migration
 db = SQLAlchemy()
+migrate = Migrate()
 
 
 def create_app(config_name=os.getenv('FLASK_ENV', 'default')):
@@ -20,6 +22,12 @@ def create_app(config_name=os.getenv('FLASK_ENV', 'default')):
 
     # Initialize database
     db.init_app(app)
+
+    # Initialize migrations
+    migrate.init_app(app, db)
+
+    # Import models here to ensure they are registered with SQLAlchemy
+    from app.models import Course
 
     # --- Environment-Specific Configurations ---
     is_production = app.config['FLASK_ENV'] == 'production'
@@ -70,14 +78,20 @@ def create_app(config_name=os.getenv('FLASK_ENV', 'default')):
         title='Gradeinator API',
         description='API for the Gradeinator application, including authentication.',
         doc='/docs/',
-        prefix='/api'  # Add prefix to avoid root route conflict
+        prefix='/api',  # Add prefix to avoid root route conflict
     )
 
     # 5. Register API Namespaces
     from app.routes.general import api as general_ns
     from app.routes.auth import api as auth_ns
+    from app.routes.courses import api as courses_ns
 
     api.add_namespace(general_ns, path='/general')
     api.add_namespace(auth_ns, path='/auth')
+    api.add_namespace(courses_ns, path='/courses')
+
+    # Register CLI commands
+    from app import cli
+    cli.init_app(app)
 
     return app
