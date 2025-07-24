@@ -45,11 +45,17 @@ class TestingConfig(Config):
     """Testing configuration"""
     TESTING = True
     DEBUG = True
+    FLASK_ENV = 'testing'
     SECRET_KEY = 'test-secret-key'
     SQLALCHEMY_DATABASE_URI = 'sqlite:///:memory:'
     AWS_COGNITO_DOMAIN = 'test.auth.us-east-1.amazoncognito.com'
     AWS_COGNITO_APP_CLIENT_ID = 'test-client-id'
     AWS_COGNITO_APP_CLIENT_SECRET = 'test-secret'
+    # Ensure we don't try to use PostgreSQL features in testing
+    SQLALCHEMY_ENGINE_OPTIONS = {
+        'pool_pre_ping': True,
+        'pool_recycle': 300,
+    }
 
 
 # Configuration dictionary

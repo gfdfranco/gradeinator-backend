@@ -23,6 +23,7 @@ services:
     volumes:
       # Mount code for live reloading
       - .:/app
+      - ./migrations:/app/migrations  # Persist migrations
       - /app/__pycache__
     environment:
       FLASK_ENV: ${FLASK_ENV}
