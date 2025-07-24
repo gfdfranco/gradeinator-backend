@@ -176,9 +176,7 @@ class CourseResource(Resource):
         data = request.get_json()
 
         # Validate that all required fields are present
-        required_fields = [
-            field for field, props in course_model.items() if props.required
-        ]
+        required_fields = ['name', 'course_code', 'is_active', 'start_date', 'end_date']
         missing_fields = [field for field in required_fields if field not in data]
 
         if missing_fields:

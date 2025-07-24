@@ -1,4 +1,5 @@
 import pytest
+import uuid
 from datetime import date
 from app.models.course import Course
 from app import db
