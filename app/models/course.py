@@ -1,6 +1,6 @@
 import uuid
 from datetime import datetime, timezone
-from sqlalchemy import Column, Integer, String, Boolean, DateTime, Date, Text
+from sqlalchemy import Column, Integer, String, Boolean, DateTime, Date
 from sqlalchemy.ext.hybrid import hybrid_property
 from app import db
 
