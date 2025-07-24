@@ -1,30 +1,29 @@
-# Use an official Python runtime as a parent image
-FROM python:3.12.2-slim
+FROM python:3.12-slim
 
-# Set the working directory in the container
+# Set environment variables
+ENV PYTHONDONTWRITEBYTECODE=1
+ENV PYTHONUNBUFFERED=1
+
+# Set work directory
 WORKDIR /app
 
-# Install system dependencies
-RUN apt-get update && \
-    apt-get install -y \
-    gcc \
-    python3-dev \
-    libpq-dev \
-    --no-install-recommends && \
-    rm -rf /var/lib/apt/lists/*
+# Install system dependencies including postgresql-client
+RUN apt-get update && apt-get install -y \
+    postgresql-client \
+    && rm -rf /var/lib/apt/lists/*
 
-# Copy the requirements directory into the container
+# Install Python dependencies
 COPY requirements/ requirements/
+RUN pip install --no-cache-dir -r requirements/dev.txt
 
-# Copy the entrypoint script
-COPY scripts/entrypoint.sh /entrypoint.sh
-RUN chmod +x /entrypoint.sh
-
-# Copy the rest of the application code into the container at /app
+# Copy application code
 COPY . .
 
-# Expose port 5000 for the Flask application
-EXPOSE 5000
+# Make sure scripts have execute permissions (more explicit)
+RUN chmod 755 scripts/entrypoint.sh scripts/run_migrations.sh
 
-# Set the entrypoint script as the default command
-ENTRYPOINT ["/entrypoint.sh"]
+# Set entrypoint using bash explicitly
+ENTRYPOINT ["bash", "./scripts/entrypoint.sh"]
+
+# Default command
+CMD ["python", "app.py"]
